@@ -63,10 +63,30 @@ lib/
 
 **Требования:** Flutter SDK 3.9.2+, Dart 3.x
 
+### Быстрый старт (рекомендуется)
+
 ```bash
 # 1. Клонировать репозиторий
 git clone https://github.com/bru1f0rc3/MCHSTestMobileAPP.git
-cd MCHSTestMobileAPP-master
+cd MCHSTestMobileAPP
+
+# 2. Запустить скрипт настройки
+# Linux / macOS:
+chmod +x setup.sh && ./setup.sh
+
+# Windows:
+setup.bat
+
+# 3. Запустить приложение
+flutter run
+```
+
+### Ручная установка
+
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/bru1f0rc3/MCHSTestMobileAPP.git
+cd MCHSTestMobileAPP
 
 # 2. Установить зависимости
 flutter pub get
