@@ -1,12 +1,12 @@
-// This is a basic Flutter widget test for MCHS Mobile App.
-//
-// To run these tests, execute: flutter test
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 
 void main() {
-  testWidgets('App starts without errors', (WidgetTester tester) async {
-    // Placeholder test - actual app requires Riverpod and network setup
-    expect(true, isTrue);
+  testWidgets('MaterialApp builds without errors', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: Text('MCHS'))),
+    );
+
+    expect(find.text('MCHS'), findsOneWidget);
   });
 }

@@ -41,20 +41,14 @@
 ```
 lib/
 ├── main.dart
-├── core/
-│   ├── config/        # AppConfig, ApiEndpoints, StorageKeys
-│   ├── network/       # Dio client с interceptors
-│   ├── router/        # Все маршруты (GoRouter)
-│   ├── theme/         # Светлая и тёмная тема
-│   └── widgets/       # Переиспользуемые виджеты
-└── features/
-    ├── auth/          # Вход, регистрация, сброс пароля
-    ├── home/          # Главный экран
-    ├── lectures/      # Список лекций и детальный просмотр
-    ├── testing/       # Тесты, прохождение, результаты, история
-    ├── profile/       # Профиль, статистика, безопасность
-    ├── admin/         # Панель администратора
-    └── shell/         # Нижняя навигация
+├── screens/       # Все экраны приложения
+├── models/        # Модели данных (User, Test, Lecture и т.д.)
+├── services/      # API-сервисы (Dio)
+├── providers/     # Провайдеры состояния (Riverpod)
+├── widgets/       # Переиспользуемые виджеты
+├── theme/         # Светлая и тёмная тема
+├── utils/         # Утилиты (валидаторы, логгер, кеш и т.д.)
+└── config/        # Конфигурация (API URL, роутер, Dio, константы)
 ```
 
 ---
@@ -82,7 +76,7 @@ flutter run
 
 ## Конфигурация
 
-Базовый URL API задаётся в `lib/core/config/app_config.dart`:
+Базовый URL API задаётся в `lib/config/app_config.dart`:
 
 ```dart
 static const String baseUrl = 'http://91.184.241.59:5000/api';

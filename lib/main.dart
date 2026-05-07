@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mchs_mobile_app/core/router/app_router.dart';
-import 'package:mchs_mobile_app/core/theme/app_theme.dart';
-import 'package:mchs_mobile_app/core/providers/theme_provider.dart';
+import 'package:mchs_mobile_app/config/app_router.dart';
+import 'package:mchs_mobile_app/theme/app_theme.dart';
+import 'package:mchs_mobile_app/providers/theme_provider.dart';
 
 void main() async {
   runZonedGuarded<Future<void>>(
