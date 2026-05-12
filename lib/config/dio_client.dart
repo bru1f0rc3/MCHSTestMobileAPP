@@ -60,9 +60,6 @@ class AuthInterceptor extends Interceptor {
       ApiEndpoints.register,
       ApiEndpoints.guest,
       ApiEndpoints.guestStatus,
-      ApiEndpoints.sendCode,
-      ApiEndpoints.forgotPasswordRequestCode,
-      ApiEndpoints.forgotPasswordConfirm,
     ];
 
     if (!noAuthEndpoints.contains(options.path)) {
@@ -72,7 +69,7 @@ class AuthInterceptor extends Interceptor {
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       } else {
-        print('[AUTH] No token for ${options.path}');
+        developer.log('No token for ${options.path}', name: 'AUTH');
       }
     }
 
@@ -82,7 +79,7 @@ class AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      print('[AUTH] 401 on ${err.requestOptions.path}');
+      developer.log('401 on ${err.requestOptions.path}', name: 'AUTH');
     }
     handler.next(err);
   }

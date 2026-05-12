@@ -122,7 +122,7 @@ class ProfileScreen extends ConsumerWidget {
                 _SettingsTile(
                   icon: Icons.manage_accounts_outlined,
                   title: 'Личные данные',
-                  subtitle: 'ФИО, пароль, email',
+                  subtitle: 'ФИО, пароль',
                   onTap: () => context.push('/profile-security'),
                 ),
                 _SettingsTile(

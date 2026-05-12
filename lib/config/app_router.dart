@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mchs_mobile_app/screens/login_screen.dart';
 import 'package:mchs_mobile_app/screens/register_screen.dart';
-import 'package:mchs_mobile_app/screens/forgot_password_screen.dart';
 import 'package:mchs_mobile_app/screens/splash_screen.dart';
 import 'package:mchs_mobile_app/screens/guest_conversion_screen.dart';
 import 'package:mchs_mobile_app/providers/auth_provider.dart';
@@ -35,7 +34,6 @@ class Routes {
   static const String splash = 'splash';
   static const String login = 'login';
   static const String register = 'register';
-  static const String forgotPassword = 'forgot-password';
   static const String guestConversion = 'guest-conversion';
 
   static const String home = 'home';
@@ -81,7 +79,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthRoute =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
-          state.matchedLocation == '/forgot-password' ||
           state.matchedLocation == '/splash';
 
       if (state.matchedLocation == '/splash') {
@@ -115,11 +112,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/register',
         name: Routes.register,
         builder: (context, state) => const RegisterScreen(),
-      ),
-      GoRoute(
-        path: '/forgot-password',
-        name: Routes.forgotPassword,
-        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/guest-conversion',

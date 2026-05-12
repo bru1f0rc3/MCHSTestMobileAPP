@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
+import 'package:mchs_mobile_app/utils/validators.dart';
 import 'package:mchs_mobile_app/widgets/custom_button.dart';
-import 'package:mchs_mobile_app/services/auth_service.dart';
 import 'package:mchs_mobile_app/widgets/auth_scaffold.dart';
 import 'package:mchs_mobile_app/providers/auth_provider.dart';
 
@@ -20,20 +20,22 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _emailCodeController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _patronymicController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
-  bool _isSendingCode = false;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _emailController.dispose();
-    _emailCodeController.dispose();
+    _lastNameController.dispose();
+    _firstNameController.dispose();
+    _patronymicController.dispose();
     super.dispose();
   }
 
@@ -57,8 +59,9 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
         .convertGuestToUser(
           _usernameController.text.trim(),
           _passwordController.text,
-          email: _emailController.text.trim(),
-          verificationCode: _emailCodeController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          firstName: _firstNameController.text.trim(),
+          patronymic: _patronymicController.text.trim(),
         );
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -74,21 +77,6 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
     }
   }
 
-  Future<void> _sendCode() async {
-    if (_emailController.text.trim().isEmpty) {
-      _toast('Введите email', error: true);
-      return;
-    }
-    setState(() => _isSendingCode = true);
-    final ok = await ref.read(authServiceProvider).sendVerificationCode(
-          email: _emailController.text.trim(),
-          purpose: 'registration',
-        );
-    if (!mounted) return;
-    setState(() => _isSendingCode = false);
-    _toast(ok ? 'Код отправлен' : 'Не удалось отправить код', error: !ok);
-  }
-
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
@@ -101,62 +89,38 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AuthField(
+              controller: _lastNameController,
+              label: 'Фамилия',
+              hint: 'Иванов',
+              validator: (v) => Validators.minLength(v, 2, 'Фамилия'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthField(
+              controller: _firstNameController,
+              label: 'Имя',
+              hint: 'Иван',
+              validator: (v) => Validators.minLength(v, 2, 'Имя'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthField(
+              controller: _patronymicController,
+              label: 'Отчество',
+              hint: 'Иванович (необязательно)',
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (v.trim().length < 2) return 'Минимум 2 символа';
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AuthField(
               controller: _usernameController,
               label: 'Имя пользователя',
               hint: 'Латинские буквы, цифры, _',
               icon: Icons.alternate_email_rounded,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Введите имя пользователя';
-                if (v.length < 3) return 'Минимум 3 символа';
-                if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v)) {
-                  return 'Только латинские буквы, цифры и _';
-                }
-                return null;
-              },
+              validator: Validators.username,
             ),
             const SizedBox(height: AppSpacing.md),
-            AuthField(
-              controller: _emailController,
-              label: 'Email',
-              hint: 'example@mail.ru',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Введите email';
-                if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v)) {
-                  return 'Неверный формат email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AuthField(
-              controller: _emailCodeController,
-              label: 'Код из письма',
-              hint: '6 цифр',
-              icon: Icons.verified_outlined,
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                if (v == null || v.trim().length != 6) {
-                  return 'Введите 6-значный код';
-                }
-                return null;
-              },
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: (_isLoading || _isSendingCode) ? null : _sendCode,
-                child: _isSendingCode
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Получить код'),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
             AuthField(
               controller: _passwordController,
               label: 'Пароль',
@@ -168,11 +132,7 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
                 onTap: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Введите пароль';
-                if (v.length < 6) return 'Минимум 6 символов';
-                return null;
-              },
+              validator: Validators.password,
             ),
             const SizedBox(height: AppSpacing.md),
             AuthField(
@@ -186,13 +146,8 @@ class _GuestConversionScreenState extends ConsumerState<GuestConversionScreen> {
                 onTap: () =>
                     setState(() => _obscureConfirm = !_obscureConfirm),
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Подтвердите пароль';
-                if (v != _passwordController.text) {
-                  return 'Пароли не совпадают';
-                }
-                return null;
-              },
+              validator: (v) =>
+                  Validators.confirmPassword(v, _passwordController.text),
             ),
             const SizedBox(height: AppSpacing.xl),
             CustomButton(

@@ -36,6 +36,7 @@ class LectureListState {
 }
 
 class LectureListNotifier extends StateNotifier<LectureListState> {
+  static const int _pageSize = 20;
   final LectureService _lectureService;
 
   LectureListNotifier(this._lectureService) : super(const LectureListState()) {
@@ -53,13 +54,16 @@ class LectureListNotifier extends StateNotifier<LectureListState> {
 
     try {
       final page = refresh ? 1 : state.currentPage;
-      final newLectures = await _lectureService.getLectures(page: page);
+      final newLectures = await _lectureService.getLectures(
+        page: page,
+        pageSize: _pageSize,
+      );
 
       state = state.copyWith(
         lectures: refresh ? newLectures : [...state.lectures, ...newLectures],
         isLoading: false,
         currentPage: page + 1,
-        hasMore: newLectures.isNotEmpty,
+        hasMore: newLectures.length >= _pageSize,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

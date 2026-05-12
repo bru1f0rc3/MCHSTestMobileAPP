@@ -17,11 +17,13 @@ class ProfileSecurityScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
+  final _fioFormKey = GlobalKey<FormState>();
   final _lastNameController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _patronymicController = TextEditingController();
 
   bool _loadingFio = false;
+  bool _profilePrefilled = false;
 
   @override
   void dispose() {
@@ -43,10 +45,9 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
   }
 
   Future<void> _saveFio() async {
+    if (!(_fioFormKey.currentState?.validate() ?? false)) return;
     setState(() => _loadingFio = true);
-    final result = await ref
-        .read(authServiceProvider)
-        .updateProfile(
+    final result = await ref.read(authServiceProvider).updateProfile(
           lastName: _lastNameController.text.trim(),
           firstName: _firstNameController.text.trim(),
           patronymic: _patronymicController.text.trim(),
@@ -66,74 +67,86 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
     final profileAsync = ref.watch(currentProfileProvider);
 
     profileAsync.whenData((profile) {
-      if (profile == null) return;
-      if (_lastNameController.text.isEmpty &&
-          _firstNameController.text.isEmpty &&
-          _patronymicController.text.isEmpty) {
-        _lastNameController.text = (profile['lastName'] as String?) ?? '';
-        _firstNameController.text = (profile['firstName'] as String?) ?? '';
-        _patronymicController.text = (profile['patronymic'] as String?) ?? '';
-      }
+      if (profile == null || _profilePrefilled) return;
+      _profilePrefilled = true;
+      _lastNameController.text = (profile['lastName'] as String?) ?? '';
+      _firstNameController.text = (profile['firstName'] as String?) ?? '';
+      _patronymicController.text = (profile['patronymic'] as String?) ?? '';
     });
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(title: const Text('Личные данные и безопасность')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _section(
-              context,
-              title: '1) Личные данные (ФИО)',
-              child: Column(
-                children: [
-                  _field(context, _lastNameController, 'Фамилия'),
-                  const SizedBox(height: 10),
-                  _field(context, _firstNameController, 'Имя'),
-                  const SizedBox(height: 10),
-                  _field(context, _patronymicController, 'Отчество'),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    text: 'Сохранить ФИО',
-                    onPressed: _loadingFio ? null : _saveFio,
-                    isLoading: _loadingFio,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          child: Column(
+            children: [
+              _section(
+                context,
+                title: 'Личные данные (ФИО)',
+                child: Form(
+                  key: _fioFormKey,
+                  child: Column(
+                    children: [
+                      _field(
+                        context,
+                        _lastNameController,
+                        'Фамилия',
+                        validator: (v) =>
+                            Validators.minLength(v, 2, 'Фамилия'),
+                      ),
+                      const SizedBox(height: 10),
+                      _field(
+                        context,
+                        _firstNameController,
+                        'Имя',
+                        validator: (v) => Validators.minLength(v, 2, 'Имя'),
+                      ),
+                      const SizedBox(height: 10),
+                      _field(
+                        context,
+                        _patronymicController,
+                        'Отчество (необязательно)',
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          if (v.trim().length < 2) return 'Минимум 2 символа';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      CustomButton(
+                        text: 'Сохранить ФИО',
+                        onPressed: _loadingFio ? null : _saveFio,
+                        isLoading: _loadingFio,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            _section(
-              context,
-              title: '2) Смена пароля',
-              child: CustomButton(
-                text: 'Открыть окно смены пароля',
-                icon: Icons.lock_outline_rounded,
-                onPressed: _openChangePasswordModal,
+              const SizedBox(height: 14),
+              _section(
+                context,
+                title: 'Смена пароля',
+                child: CustomButton(
+                  text: 'Сменить пароль',
+                  icon: Icons.lock_outline_rounded,
+                  onPressed: _openChangePasswordModal,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            _section(
-              context,
-              title: '3) Смена email',
-              child: CustomButton(
-                text: 'Открыть окно смены email',
-                icon: Icons.alternate_email_rounded,
-                onPressed: _openChangeEmailModal,
+              const SizedBox(height: 14),
+              _section(
+                context,
+                title: 'Удаление аккаунта',
+                child: CustomButton(
+                  text: 'Удалить аккаунт',
+                  icon: Icons.delete_outline_rounded,
+                  backgroundColor: AppColors.error,
+                  onPressed: _confirmDeleteAccount,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            _section(
-              context,
-              title: '4) Удаление аккаунта',
-              child: CustomButton(
-                text: 'Удалить аккаунт',
-                icon: Icons.delete_outline_rounded,
-                backgroundColor: AppColors.error,
-                onPressed: _openDeleteAccountModal,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -141,119 +154,62 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
 
   Future<void> _openChangePasswordModal() async {
     final auth = ref.read(authServiceProvider);
-    final codeCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     final oldCtrl = TextEditingController();
     final pass1Ctrl = TextEditingController();
     final pass2Ctrl = TextEditingController();
     bool loading = false;
-    bool codeAccepted = false;
-    String? maskedEmail;
+    bool obscureOld = true;
     bool obscure1 = true;
     bool obscure2 = true;
-    bool obscureOld = true;
 
     await showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) {
-          Future<void> sendCode() async {
-            setModal(() => loading = true);
-            final masked = await auth.requestChangePasswordCode();
-            if (!context.mounted) return;
-            setModal(() {
-              loading = false;
-              maskedEmail = (masked != null && masked.isNotEmpty)
-                  ? masked
-                  : null;
-            });
-            _showMessage(
-              maskedEmail != null
-                  ? 'Код отправлен на $maskedEmail'
-                  : 'Не удалось отправить код',
-              ok: maskedEmail != null,
-            );
-          }
-
-          Future<void> verifyCodeAndNext() async {
-            if (codeCtrl.text.trim().length != 6) {
-              _showMessage('Введите 6-значный код');
-              return;
-            }
-            setModal(() => codeAccepted = true);
-          }
-
-          Future<void> submitPassword() async {
-            if (oldCtrl.text.isEmpty) {
-              _showMessage('Введите текущий пароль');
-              return;
-            }
-            if (pass1Ctrl.text.length < 6) {
-              _showMessage('Новый пароль: минимум 6 символов');
-              return;
-            }
-            if (pass1Ctrl.text != pass2Ctrl.text) {
-              _showMessage('Пароли не совпадают');
-              return;
-            }
+          Future<void> submit() async {
+            if (!(formKey.currentState?.validate() ?? false)) return;
             setModal(() => loading = true);
             final ok = await auth.changePassword(
               oldCtrl.text,
               pass1Ctrl.text,
-              verificationCode: codeCtrl.text.trim(),
             );
             if (!context.mounted) return;
             setModal(() => loading = false);
-            if (ok) {
-              Navigator.of(ctx).pop();
-            }
+            if (ok) Navigator.of(ctx).pop();
             _showMessage(
-              ok ? 'Пароль успешно изменён' : 'Не удалось сменить пароль',
+              ok ? 'Пароль успешно изменён' : 'Неверный текущий пароль',
               ok: ok,
             );
           }
 
           return _modalFrame(
             context: ctx,
-            title: codeAccepted
-                ? 'Установите новый пароль'
-                : 'Верификация безопасности',
-            icon: codeAccepted ? Icons.lock : Icons.mark_email_read_outlined,
-            subtitle: codeAccepted
-                ? 'Пожалуйста, установите новый надёжный пароль'
-                : 'Введите код подтверждения из эл. письма для проверки личности'
-                      '${maskedEmail != null ? '\n$maskedEmail' : ''}',
-            body: Column(
-              children: [
-                if (!codeAccepted) ...[
-                  _field(ctx, codeCtrl, 'Код подтверждения'),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: loading ? null : sendCode,
-                      child: const Text('Отправить'),
-                    ),
-                  ),
-                ] else ...[
+            title: 'Смена пароля',
+            icon: Icons.lock,
+            subtitle: 'Введите текущий пароль и новый пароль',
+            body: Form(
+              key: formKey,
+              child: Column(
+                children: [
                   _field(
                     ctx,
                     oldCtrl,
                     'Текущий пароль',
                     obscure: obscureOld,
-                    onToggle: () {
-                      setModal(() => obscureOld = !obscureOld);
-                    },
+                    onToggle: () => setModal(() => obscureOld = !obscureOld),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Введите пароль' : null,
                   ),
                   const SizedBox(height: 10),
                   _field(
                     ctx,
                     pass1Ctrl,
-                    'Введите пароль',
+                    'Новый пароль',
                     obscure: obscure1,
-                    onToggle: () {
-                      setModal(() => obscure1 = !obscure1);
-                    },
+                    onToggle: () => setModal(() => obscure1 = !obscure1),
+                    validator: Validators.password,
                   ),
                   const SizedBox(height: 10),
                   _field(
@@ -261,274 +217,56 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
                     pass2Ctrl,
                     'Повторите пароль',
                     obscure: obscure2,
-                    onToggle: () {
-                      setModal(() => obscure2 = !obscure2);
-                    },
+                    onToggle: () => setModal(() => obscure2 = !obscure2),
+                    validator: (v) =>
+                        Validators.confirmPassword(v, pass1Ctrl.text),
                   ),
                 ],
-              ],
+              ),
             ),
             loading: loading,
-            primaryText: codeAccepted ? 'ОК' : 'Далее',
-            onPrimary: codeAccepted ? submitPassword : verifyCodeAndNext,
+            primaryText: 'Сохранить',
+            onPrimary: submit,
           );
         },
       ),
     );
   }
 
-  Future<void> _openChangeEmailModal() async {
-    final auth = ref.read(authServiceProvider);
-    final currentCodeCtrl = TextEditingController();
-    final newEmailCtrl = TextEditingController();
-    final newCodeCtrl = TextEditingController();
-
-    bool loading = false;
-    int step = 1;
-    String? maskedCurrent;
-    String? maskedNew;
-    bool newCodeSent = false;
-
-    await showDialog(
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) {
-          Future<void> sendCurrentCode() async {
-            setModal(() => loading = true);
-            final masked = await auth.requestCurrentEmailChangeCode();
-            if (!context.mounted) return;
-            setModal(() {
-              loading = false;
-              maskedCurrent = (masked != null && masked.isNotEmpty)
-                  ? masked
-                  : null;
-            });
-            _showMessage(
-              maskedCurrent != null
-                  ? 'Код отправлен на $maskedCurrent'
-                  : 'Не удалось отправить код',
-              ok: maskedCurrent != null,
-            );
-          }
-
-          Future<void> sendNewCodeAndProceed() async {
-            if (currentCodeCtrl.text.trim().length != 6) {
-              _showMessage('Введите код с текущей почты');
-              return;
-            }
-            if (step == 1) {
-              setModal(() => loading = true);
-              final ok = await auth.verifyCurrentEmailCode(
-                currentEmailCode: currentCodeCtrl.text.trim(),
-              );
-              if (!context.mounted) return;
-              setModal(() {
-                loading = false;
-                if (ok) step = 2;
-              });
-              _showMessage(
-                ok
-                    ? 'Текущая почта подтверждена'
-                    : 'Неверный код текущей почты',
-                ok: ok,
-              );
-              return;
-            }
-
-            final email = newEmailCtrl.text.trim();
-            if (Validators.email(email) != null) {
-              _showMessage('Введите корректную новую почту');
-              return;
-            }
-            setModal(() => loading = true);
-            final masked = await auth.requestNewEmailCode(newEmail: email);
-            if (!context.mounted) return;
-            setModal(() {
-              loading = false;
-              maskedNew = (masked != null && masked.isNotEmpty) ? masked : null;
-              newCodeSent = maskedNew != null;
-            });
-            _showMessage(
-              newCodeSent
-                  ? 'Код отправлен на $maskedNew'
-                  : 'Не удалось отправить код на новую почту',
-              ok: newCodeSent,
-            );
-          }
-
-          Future<void> confirmNewEmail() async {
-            if (newCodeCtrl.text.trim().length != 6) {
-              _showMessage('Введите код с новой почты');
-              return;
-            }
-            final email = newEmailCtrl.text.trim();
-            if (Validators.email(email) != null) {
-              _showMessage('Введите корректную новую почту');
-              return;
-            }
-            setModal(() => loading = true);
-            final error = await auth.confirmNewEmail(newCodeCtrl.text.trim(), email);
-            final ok = error == null;
-            if (!context.mounted) return;
-            setModal(() => loading = false);
-            if (ok) {
-              ref.invalidate(currentProfileProvider);
-              Navigator.of(ctx).pop();
-            }
-            _showMessage(
-              ok ? 'Email успешно изменён' : error,
-              ok: ok,
-            );
-          }
-
-          return _modalFrame(
-            context: ctx,
-            title: step == 1
-                ? 'Верификация безопасности'
-                : 'Изменить привязанную электронную почту',
-            icon: Icons.mark_email_read_outlined,
-            subtitle: step == 1
-                ? 'Введите код подтверждения из эл. письма для проверки личности'
-                      '${maskedCurrent != null ? '\n$maskedCurrent' : ''}'
-                : 'Введите электронную почту, которую вы хотите привязать к учётной записи',
-            body: Column(
-              children: [
-                if (step == 1) ...[
-                  _field(ctx, currentCodeCtrl, 'Код подтверждения'),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: loading ? null : sendCurrentCode,
-                      child: const Text('Отправить'),
-                    ),
-                  ),
-                ] else ...[
-                  _field(ctx, newEmailCtrl, 'Электронная почта'),
-                  const SizedBox(height: 10),
-                  _field(ctx, newCodeCtrl, 'Код подтверждения'),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: loading ? null : sendNewCodeAndProceed,
-                      child: Text(newCodeSent ? 'Переотправить' : 'Отправить'),
-                    ),
-                  ),
-                  if (maskedNew != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Код отправлен на $maskedNew',
-                      style: AppTypography.caption.copyWith(
-                        color: ctx.textSecondaryColor,
-                      ),
-                    ),
-                  ],
-                ],
-              ],
-            ),
-            loading: loading,
-            primaryText: step == 1 ? 'Далее' : (newCodeSent ? 'ОК' : 'Далее'),
-            onPrimary: step == 1
-                ? sendNewCodeAndProceed
-                : (newCodeSent ? confirmNewEmail : sendNewCodeAndProceed),
-          );
-        },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить аккаунт?'),
+        content: const Text(
+          'Это действие необратимо. Все ваши данные и история тестов будут удалены.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Удалить'),
+          ),
+        ],
       ),
     );
-  }
+    if (confirmed != true) return;
+    if (!mounted) return;
 
-  Future<void> _openDeleteAccountModal() async {
-    final auth = ref.read(authServiceProvider);
-    final codeCtrl = TextEditingController();
-    bool loading = false;
-    String? maskedEmail;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) {
-          Future<void> sendCode() async {
-            setModal(() => loading = true);
-            final masked = await auth.requestDeleteAccountCode();
-            if (!context.mounted) return;
-            setModal(() {
-              loading = false;
-              maskedEmail = (masked != null && masked.isNotEmpty)
-                  ? masked
-                  : null;
-            });
-            _showMessage(
-              maskedEmail != null
-                  ? 'Код отправлен на $maskedEmail'
-                  : 'Не удалось отправить код удаления',
-              ok: maskedEmail != null,
-            );
-          }
-
-          Future<void> confirmDelete() async {
-            if (codeCtrl.text.trim().length != 6) {
-              _showMessage('Введите код из письма');
-              return;
-            }
-
-            setModal(() => loading = true);
-            final ok = await auth.deleteAccount(code: codeCtrl.text.trim());
-            if (!mounted) return;
-            setModal(() => loading = false);
-
-            if (!ok) {
-              _showMessage('Не удалось удалить аккаунт (проверьте код)');
-              return;
-            }
-
-            await ref.read(authStateProvider.notifier).logout();
-            if (!mounted) return;
-            context.go('/login');
-            _showMessage('Аккаунт удалён', ok: true);
-          }
-
-          return _modalFrame(
-            context: ctx,
-            title: 'Удаление аккаунта',
-            icon: Icons.delete_forever_outlined,
-            subtitle:
-                'Подтвердите удаление кодом из email.\n'
-                'Если передумаете, просто закройте окно.',
-            body: Column(
-              children: [
-                _field(ctx, codeCtrl, 'Код подтверждения'),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: loading ? null : sendCode,
-                    child: Text(
-                      maskedEmail == null ? 'Отправить код' : 'Переотправить',
-                    ),
-                  ),
-                ),
-                if (maskedEmail != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Код отправлен на $maskedEmail',
-                    style: AppTypography.caption.copyWith(
-                      color: ctx.textSecondaryColor,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ],
-            ),
-            loading: loading,
-            primaryText: 'Удалить аккаунт',
-            onPrimary: confirmDelete,
-          );
-        },
-      ),
-    );
+    final ok = await ref.read(authServiceProvider).deleteAccount();
+    if (!mounted) return;
+    if (!ok) {
+      _showMessage('Не удалось удалить аккаунт');
+      return;
+    }
+    await ref.read(authStateProvider.notifier).logout();
+    if (!mounted) return;
+    context.go('/login');
+    _showMessage('Аккаунт удалён', ok: true);
   }
 
   Widget _section(
@@ -567,10 +305,12 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
     String label, {
     bool obscure = false,
     VoidCallback? onToggle,
+    String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
+      validator: validator,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
@@ -606,67 +346,75 @@ class _ProfileSecurityScreenState extends ConsumerState<ProfileSecurityScreen> {
     return Dialog(
       backgroundColor: context.surfaceColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: AppTypography.heading3.copyWith(
-                      color: context.textPrimaryColor,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTypography.heading3.copyWith(
+                          color: context.textPrimaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: context.surfaceVariantColor,
+                  child: Icon(icon, color: context.primaryColor, size: 32),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.body2.copyWith(
+                    color: context.textSecondaryColor,
                   ),
                 ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () => Navigator.of(context).pop(),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.close),
+                const SizedBox(height: 14),
+                body,
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: loading ? null : onPrimary,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(primaryText),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: context.surfaceVariantColor,
-              child: Icon(icon, color: context.primaryColor, size: 32),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: AppTypography.body2.copyWith(
-                color: context.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            body,
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: loading ? null : onPrimary,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(primaryText),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

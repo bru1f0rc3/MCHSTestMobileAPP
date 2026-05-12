@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mchs_mobile_app/config/app_constants.dart';
@@ -32,7 +33,7 @@ class TestService {
       }
       return [];
     } catch (e) {
-      print('getAllTests error: $e');
+      developer.log('getAllTests error: $e', name: 'TestService');
       return [];
     }
   }
@@ -55,7 +56,7 @@ class TestService {
       }
       return [];
     } catch (e) {
-      print('getTests (available) error: $e');
+      developer.log('getTests (available) error: $e', name: 'TestService');
       return [];
     }
   }
@@ -184,56 +185,6 @@ class TestService {
       return true;
     } catch (_) {
       return false;
-    }
-  }
-
-  Future<List<int>?> exportMyResultsCsv({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    return _downloadCsv(
-      '${ApiConfig.testing}/my-results/export',
-      startDate,
-      endDate,
-      null,
-    );
-  }
-
-  Future<List<int>?> exportAllResultsCsv({
-    DateTime? startDate,
-    DateTime? endDate,
-    String? searchQuery,
-  }) async {
-    return _downloadCsv(
-      '${ApiConfig.testing}/all-results/export',
-      startDate,
-      endDate,
-      searchQuery,
-    );
-  }
-
-  Future<List<int>?> _downloadCsv(
-    String path,
-    DateTime? startDate,
-    DateTime? endDate,
-    String? searchQuery,
-  ) async {
-    try {
-      final query = <String, dynamic>{};
-      if (startDate != null) query['startDate'] = startDate.toIso8601String();
-      if (endDate != null) query['endDate'] = endDate.toIso8601String();
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        query['searchQuery'] = searchQuery;
-      }
-
-      final response = await _dio.get<List<int>>(
-        path,
-        queryParameters: query,
-        options: Options(responseType: ResponseType.bytes),
-      );
-      return response.data;
-    } catch (_) {
-      return null;
     }
   }
 

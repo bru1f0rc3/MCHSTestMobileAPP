@@ -2,41 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
-import 'package:mchs_mobile_app/utils/error_handler.dart';
-import 'package:mchs_mobile_app/utils/file_saver.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
-import 'package:mchs_mobile_app/services/test_service.dart';
 import 'package:mchs_mobile_app/providers/test_provider.dart';
 
 class TestHistoryScreen extends ConsumerWidget {
   const TestHistoryScreen({super.key});
-
-  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
-    final service = ref.read(testServiceProvider);
-    final bytes = await service.exportMyResultsCsv();
-    if (bytes == null || bytes.isEmpty) {
-      if (context.mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Не удалось выгрузить CSV');
-      }
-      return;
-    }
-
-    final now = DateTime.now();
-    final stamp =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_'
-        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    final path = await FileSaver.saveBytes(
-      bytes: bytes,
-      suggestedName: 'my_results_$stamp.csv',
-    );
-
-    if (!context.mounted) return;
-    if (path == null) {
-      ErrorHandler.showWarningSnackBar(context, 'Сохранение отменено');
-    } else {
-      ErrorHandler.showSuccessSnackBar(context, 'CSV сохранён: $path');
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,11 +17,6 @@ class TestHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('История тестов'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Экспорт в CSV',
-            onPressed: () => _exportCsv(context, ref),
-          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Обновить',

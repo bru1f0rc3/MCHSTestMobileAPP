@@ -71,41 +71,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     return '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}';
   }
 
-  Future<void> _exportCsv() async {
-    if (_isExporting) return;
-    setState(() => _isExporting = true);
-    try {
-      final service = ref.read(testServiceProvider);
-      final bytes = await service.exportAllResultsCsv(
-        startDate: _filters.startDate,
-        endDate: _filters.endDate,
-      );
-      if (bytes == null || bytes.isEmpty) {
-        if (mounted) {
-          ErrorHandler.showErrorSnackBar(context, 'Не удалось выгрузить CSV');
-        }
-        return;
-      }
-      final path = await FileSaver.saveBytes(
-        bytes: bytes,
-        suggestedName: 'mchs_results_${_timeStamp()}.csv',
-        mimeType: 'text/csv',
-      );
-      if (!mounted) return;
-      if (path == null) {
-        ErrorHandler.showWarningSnackBar(context, 'Сохранение отменено');
-      } else {
-        ErrorHandler.showSuccessSnackBar(context, 'CSV сохранён: $path');
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Ошибка экспорта CSV: $e');
-      }
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
-    }
-  }
-
   Future<void> _exportPdf() async {
     if (_isExporting) return;
     setState(() => _isExporting = true);
@@ -211,7 +176,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
             tooltip: 'Фильтры',
             onPressed: _openFilters,
           ),
-          PopupMenuButton<String>(
+          IconButton(
             icon: _isExporting
                 ? SizedBox(
                     width: 18,
@@ -221,34 +186,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                       color: context.textPrimaryColor,
                     ),
                   )
-                : const Icon(Icons.file_download_outlined),
-            tooltip: 'Экспорт',
-            onSelected: (v) {
-              if (v == 'pdf') _exportPdf();
-              if (v == 'csv') _exportCsv();
-            },
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf_outlined),
-                    SizedBox(width: 8),
-                    Text('Сохранить PDF'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'csv',
-                child: Row(
-                  children: [
-                    Icon(Icons.table_chart_outlined),
-                    SizedBox(width: 8),
-                    Text('Сохранить CSV'),
-                  ],
-                ),
-              ),
-            ],
+                : const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Сохранить PDF',
+            onPressed: _isExporting ? null : _exportPdf,
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),

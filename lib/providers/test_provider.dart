@@ -37,6 +37,7 @@ class TestListState {
 }
 
 class TestListNotifier extends StateNotifier<TestListState> {
+  static const int _pageSize = 20;
   final TestService _testService;
 
   TestListNotifier(this._testService) : super(const TestListState()) {
@@ -54,13 +55,16 @@ class TestListNotifier extends StateNotifier<TestListState> {
 
     try {
       final page = refresh ? 1 : state.currentPage;
-      final newTests = await _testService.getTests(page: page);
+      final newTests = await _testService.getTests(
+        page: page,
+        pageSize: _pageSize,
+      );
 
       state = state.copyWith(
         tests: refresh ? newTests : [...state.tests, ...newTests],
         isLoading: false,
         currentPage: page + 1,
-        hasMore: newTests.isNotEmpty,
+        hasMore: newTests.length >= _pageSize,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -71,6 +75,7 @@ class TestListNotifier extends StateNotifier<TestListState> {
 }
 
 class AllTestListNotifier extends StateNotifier<TestListState> {
+  static const int _pageSize = 20;
   final TestService _testService;
 
   AllTestListNotifier(this._testService) : super(const TestListState()) {
@@ -88,13 +93,16 @@ class AllTestListNotifier extends StateNotifier<TestListState> {
 
     try {
       final page = refresh ? 1 : state.currentPage;
-      final newTests = await _testService.getAllTests(page: page);
+      final newTests = await _testService.getAllTests(
+        page: page,
+        pageSize: _pageSize,
+      );
 
       state = state.copyWith(
         tests: refresh ? newTests : [...state.tests, ...newTests],
         isLoading: false,
         currentPage: page + 1,
-        hasMore: newTests.isNotEmpty,
+        hasMore: newTests.length >= _pageSize,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

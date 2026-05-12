@@ -16,20 +16,6 @@ class ApiConfig {
   static String get guest => ApiEndpoints.guest;
   static String get guestStatus => ApiEndpoints.guestStatus;
   static String get changePassword => ApiEndpoints.changePassword;
-  static String get requestChangePasswordCode =>
-      ApiEndpoints.requestChangePasswordCode;
-  static String get sendCode => ApiEndpoints.sendCode;
-  static String get forgotPasswordRequestCode =>
-      ApiEndpoints.forgotPasswordRequestCode;
-  static String get forgotPasswordConfirm => ApiEndpoints.forgotPasswordConfirm;
-  static String get requestCurrentEmailCode =>
-      ApiEndpoints.requestCurrentEmailCode;
-  static String get verifyCurrentEmailCode =>
-      ApiEndpoints.verifyCurrentEmailCode;
-  static String get requestNewEmailCode => ApiEndpoints.requestNewEmailCode;
-  static String get confirmNewEmail => ApiEndpoints.confirmNewEmail;
-  static String get requestDeleteAccountCode =>
-      ApiEndpoints.requestDeleteAccountCode;
   static String get deleteAccount => ApiEndpoints.deleteAccount;
   static String get me => ApiEndpoints.me;
 

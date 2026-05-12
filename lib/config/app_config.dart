@@ -68,21 +68,6 @@ class ApiEndpoints {
   static const String guest = '/auth/guest';
   static const String guestStatus = '/auth/guest/status';
   static const String changePassword = '/auth/change-password';
-  static const String requestChangePasswordCode =
-      '/auth/change-password/request-code';
-  static const String sendCode = '/auth/send-code';
-  static const String forgotPasswordRequestCode =
-      '/auth/forgot-password/request-code';
-  static const String forgotPasswordConfirm = '/auth/forgot-password/confirm';
-  static const String requestCurrentEmailCode =
-      '/auth/change-email/request-current-code';
-  static const String verifyCurrentEmailCode =
-      '/auth/change-email/verify-current';
-  static const String requestNewEmailCode =
-      '/auth/change-email/request-new-code';
-  static const String confirmNewEmail = '/auth/change-email/confirm-new';
-  static const String requestDeleteAccountCode =
-      '/auth/delete-account/request-code';
   static const String deleteAccount = '/auth/delete-account';
   static const String me = '/auth/me';
   static const String users = '/users';

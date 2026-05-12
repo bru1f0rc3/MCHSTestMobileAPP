@@ -78,10 +78,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<String> getDeviceId() async {
-    if (state.deviceId != null) {
-      return state.deviceId!;
-    }
-
+    if (state.deviceId != null) return state.deviceId!;
     final deviceId = await _deviceIdService.getDeviceId();
     state = state.copyWith(deviceId: deviceId);
     return deviceId;
@@ -89,10 +86,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> login(String username, String password) async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
       final user = await _authService.login(username, password);
-
       if (user != null) {
         await _saveUserData(user);
         state = state.copyWith(
@@ -102,7 +97,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       }
-
       state = state.copyWith(
         isLoading: false,
         error: 'Неверное имя пользователя или пароль',
@@ -117,27 +111,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> register(
     String username,
     String password, {
-    required String email,
-    required String verificationCode,
     String? lastName,
     String? firstName,
     String? patronymic,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
       final deviceId = await getDeviceId();
       final user = await _authService.register(
         username,
         password,
-        email: email,
-        verificationCode: verificationCode,
         deviceId: deviceId,
         lastName: lastName,
         firstName: firstName,
         patronymic: patronymic,
       );
-
       if (user != null) {
         await _saveUserData(user);
         state = state.copyWith(
@@ -147,7 +135,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       }
-
       state = state.copyWith(
         isLoading: false,
         error: 'Не удалось зарегистрироваться. Имя пользователя занято.',
@@ -161,11 +148,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> loginAsGuest() async {
     state = state.copyWith(isLoading: true, error: null);
-
     try {
       final deviceId = await getDeviceId();
       final user = await _authService.loginAsGuest(deviceId: deviceId);
-
       if (user != null) {
         await _saveUserData(user);
         state = state.copyWith(
@@ -175,7 +160,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       }
-
       state = state.copyWith(
         isLoading: false,
         error: 'Не удалось войти как гость',
@@ -190,8 +174,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> convertGuestToUser(
     String username,
     String password, {
-    required String email,
-    required String verificationCode,
     String? lastName,
     String? firstName,
     String? patronymic,
@@ -200,12 +182,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(error: 'Вы уже зарегистрированы');
       return false;
     }
-
     return register(
       username,
       password,
-      email: email,
-      verificationCode: verificationCode,
       lastName: lastName,
       firstName: firstName,
       patronymic: patronymic,
@@ -218,7 +197,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: StorageKeys.userId);
     await _storage.delete(key: StorageKeys.username);
     await _storage.delete(key: StorageKeys.role);
-
     state = AuthState(deviceId: deviceId);
   }
 

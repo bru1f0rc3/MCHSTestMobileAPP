@@ -200,11 +200,27 @@ class _AdminLecturesScreenState extends ConsumerState<AdminLecturesScreen> {
         context.push('/lecture-detail/${lecture.id}');
         break;
       case 'edit':
-        _showEditLectureDialog(lecture);
+        _openEditLecture(lecture.id);
         break;
       case 'delete':
         _confirmDelete(lecture.id, lecture.title);
         break;
+    }
+  }
+
+  Future<void> _openEditLecture(int lectureId) async {
+    setState(() => _isProcessing = true);
+    try {
+      final service = ref.read(lectureServiceProvider);
+      final full = await service.getLectureById(lectureId);
+      if (!mounted) return;
+      if (full == null) {
+        ErrorHandler.showErrorSnackBar(context, 'Не удалось загрузить лекцию');
+        return;
+      }
+      _showEditLectureDialog(full);
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 

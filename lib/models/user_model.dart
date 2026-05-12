@@ -180,8 +180,6 @@ class LoginRequest {
 class RegisterRequest {
   final String username;
   final String password;
-  final String email;
-  final String verificationCode;
   final String? lastName;
   final String? firstName;
   final String? patronymic;
@@ -190,8 +188,6 @@ class RegisterRequest {
   RegisterRequest({
     required this.username,
     required this.password,
-    required this.email,
-    required this.verificationCode,
     this.lastName,
     this.firstName,
     this.patronymic,
@@ -202,8 +198,6 @@ class RegisterRequest {
     return {
       'username': username,
       'password': password,
-      'email': email,
-      'verificationCode': verificationCode,
       if (lastName != null && lastName!.isNotEmpty) 'lastName': lastName,
       if (firstName != null && firstName!.isNotEmpty) 'firstName': firstName,
       if (patronymic != null && patronymic!.isNotEmpty)
@@ -232,32 +226,11 @@ class UpdateProfileRequest {
 class ChangePasswordRequest {
   final String oldPassword;
   final String newPassword;
-  final String verificationCode;
 
-  ChangePasswordRequest({
-    required this.oldPassword,
-    required this.newPassword,
-    required this.verificationCode,
-  });
+  ChangePasswordRequest({required this.oldPassword, required this.newPassword});
 
   Map<String, dynamic> toJson() {
-    return {
-      'oldPassword': oldPassword,
-      'newPassword': newPassword,
-      'verificationCode': verificationCode,
-    };
-  }
-}
-
-class ForgotPasswordResponse {
-  final String maskedEmail;
-
-  ForgotPasswordResponse({required this.maskedEmail});
-
-  factory ForgotPasswordResponse.fromJson(Map<String, dynamic> json) {
-    return ForgotPasswordResponse(
-      maskedEmail: (json['maskedEmail'] ?? '').toString(),
-    );
+    return {'oldPassword': oldPassword, 'newPassword': newPassword};
   }
 }
 

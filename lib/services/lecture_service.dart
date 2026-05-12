@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mchs_mobile_app/config/app_constants.dart';
@@ -45,7 +46,7 @@ class LectureService {
       }
       return [];
     } catch (e) {
-      print('getLectures error: $e');
+      developer.log('getLectures error: $e', name: 'LectureService');
       return [];
     }
   }

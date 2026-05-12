@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
-import 'package:mchs_mobile_app/widgets/custom_button.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
+import 'package:mchs_mobile_app/widgets/embed_video_player_widget.dart';
 import 'package:mchs_mobile_app/widgets/pdf_viewer_widget.dart';
-import 'package:mchs_mobile_app/widgets/video_player_widget.dart';
 import 'package:mchs_mobile_app/providers/lecture_provider.dart';
 
 class LectureDetailScreen extends ConsumerWidget {
@@ -50,12 +48,21 @@ class LectureDetailScreen extends ConsumerWidget {
                   color: context.textPrimaryColor,
                 ),
               ),
-              if (lecture.createdAt != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Добавлено ${_formatDate(lecture.createdAt!)}',
-                  style: AppTypography.body2.copyWith(
-                    color: context.textTertiaryColor,
+              const SizedBox(height: AppSpacing.lg),
+              if (hasText) ...[
+                Container(
+                  padding: AppSpacing.paddingLg,
+                  decoration: BoxDecoration(
+                    color: context.surfaceColor,
+                    borderRadius: AppRadius.borderRadiusMd,
+                    border: Border.all(color: context.borderColor),
+                  ),
+                  child: Text(
+                    lecture.textContent!,
+                    style: AppTypography.body1.copyWith(
+                      color: context.textPrimaryColor,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
@@ -64,19 +71,16 @@ class LectureDetailScreen extends ConsumerWidget {
                 _ResourceTile(
                   icon: Icons.play_circle_outline,
                   title: 'Видеоматериал',
-                  subtitle: 'Смотреть видео',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => VideoPlayerWidget(
-                          videoUrl: lecture.videoPath!,
-                          title: lecture.title,
-                          autoPlay: true,
-                        ),
+                  subtitle: 'Открыть видео',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EmbedVideoPlayerWidget(
+                        videoUrl: lecture.videoPath!,
+                        title: lecture.title,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -97,48 +101,18 @@ class LectureDetailScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: AppSpacing.sm),
               ],
-              if (hasText) ...[
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Содержание',
-                  style: AppTypography.heading4.copyWith(
-                    color: context.textPrimaryColor,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                CustomCard(
-                  child: Text(
-                    lecture.textContent!,
-                    style: AppTypography.body1.copyWith(
-                      color: context.textPrimaryColor,
-                      height: 1.55,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xl),
-              CustomButton(
-                text: 'Перейти к тестам',
-                icon: Icons.quiz_outlined,
-                onPressed: () => context.push('/lecture-tests/$lectureId'),
-              ),
             ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ErrorState(message: error.toString()),
+        error: (error, _) => EmptyState(
+          icon: Icons.error_outline,
+          title: 'Ошибка загрузки',
+          message: error.toString(),
+        ),
       ),
     );
-  }
-
-  String _formatDate(DateTime d) {
-    const months = [
-      'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
-      'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 }
 
@@ -189,7 +163,7 @@ class _ResourceTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: AppTypography.body2.copyWith(
+                  style: AppTypography.caption.copyWith(
                     color: context.textSecondaryColor,
                   ),
                 ),

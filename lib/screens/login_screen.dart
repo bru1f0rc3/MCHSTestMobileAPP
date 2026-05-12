@@ -131,16 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 return null;
               },
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: authState.isLoading
-                    ? null
-                    : () => context.push('/forgot-password'),
-                child: const Text('Забыли пароль?'),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.lg),
             CustomButton(
               text: 'Войти',
               onPressed: authState.isLoading ? null : _handleLogin,
