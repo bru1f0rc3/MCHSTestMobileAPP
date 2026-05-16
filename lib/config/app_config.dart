@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 enum Environment { development, staging, production }
 
 class AppConfig {
@@ -6,10 +9,24 @@ class AppConfig {
   static const String appName = 'MCHS';
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
+
+  static const String _apiHostOverride = String.fromEnvironment('API_HOST');
+  static const String _apiPort = String.fromEnvironment(
+    'API_PORT',
+    defaultValue: '5000',
+  );
+
+  static String _devHost() {
+    if (_apiHostOverride.isNotEmpty) return _apiHostOverride;
+    if (kIsWeb) return 'localhost';
+    if (Platform.isAndroid) return '10.0.2.2';
+    return 'localhost';
+  }
+
   static String get baseUrl {
     switch (currentEnvironment) {
       case Environment.development:
-        return 'http://localhost:5000/api';
+        return 'http://${_devHost()}:$_apiPort/api';
       case Environment.staging:
         return 'https://staging-api.mchs.com/api';
       case Environment.production:

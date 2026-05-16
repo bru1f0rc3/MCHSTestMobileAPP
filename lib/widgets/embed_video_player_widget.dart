@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
@@ -17,9 +18,15 @@ class EmbedVideoPlayerWidget extends StatefulWidget {
 }
 
 class _EmbedVideoPlayerWidgetState extends State<EmbedVideoPlayerWidget> {
+  static const Duration _loadingTimeout = Duration(seconds: 15);
+
   String? _embedUrl;
+  bool _isYouTube = false;
   String? _errorMessage;
   bool _isLoading = true;
+  bool _firstFrameSeen = false;
+  Timer? _timeoutTimer;
+  InAppWebViewController? _webViewController;
 
   @override
   void initState() {
@@ -35,6 +42,59 @@ class _EmbedVideoPlayerWidgetState extends State<EmbedVideoPlayerWidget> {
       return;
     }
     _embedUrl = embed;
+    _isYouTube = embed.contains('youtube');
+    _startTimeout();
+  }
+
+  void _startTimeout() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(_loadingTimeout, () {
+      if (!mounted) return;
+      if (_isLoading && !_firstFrameSeen) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _isYouTube
+              ? 'Видео не загрузилось за ${_loadingTimeout.inSeconds} с. '
+                  'YouTube часто недоступен из российских сетей — '
+                  'попробуйте открыть в браузере или используйте VPN.'
+              : 'Видео не загрузилось за ${_loadingTimeout.inSeconds} секунд. '
+                  'Возможно хостинг недоступен из вашей сети.';
+        });
+      }
+    });
+  }
+
+  void _markLoaded() {
+    if (!mounted) return;
+    if (_isLoading) {
+      setState(() => _isLoading = false);
+    }
+    _firstFrameSeen = true;
+    _timeoutTimer?.cancel();
+  }
+
+  Future<void> _openExternally() async {
+    try {
+      await InAppBrowser().openUrlRequest(
+        urlRequest: URLRequest(url: WebUri(widget.videoUrl)),
+      );
+    } catch (_) {}
+  }
+
+  void _retry() {
+    setState(() {
+      _isLoading = true;
+      _firstFrameSeen = false;
+      _errorMessage = null;
+    });
+    _startTimeout();
+    _webViewController?.reload();
+  }
+
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -44,6 +104,14 @@ class _EmbedVideoPlayerWidgetState extends State<EmbedVideoPlayerWidget> {
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser),
+            tooltip: 'Открыть в браузере',
+            onPressed: _openExternally,
+          ),
+        ],
       ),
       body: _errorMessage != null
           ? _buildError(_errorMessage!)
@@ -57,15 +125,41 @@ class _EmbedVideoPlayerWidgetState extends State<EmbedVideoPlayerWidget> {
                     iframeAllowFullscreen: true,
                     transparentBackground: true,
                     useHybridComposition: true,
+                    javaScriptEnabled: true,
+                    domStorageEnabled: true,
+                    mixedContentMode:
+                        MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    userAgent:
+                        'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
+                        '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
                   ),
-                  onLoadStop: (_, __) {
-                    if (mounted) setState(() => _isLoading = false);
+                  onWebViewCreated: (controller) {
+                    _webViewController = controller;
                   },
-                  onReceivedError: (_, __, error) {
-                    if (mounted) {
+                  onLoadStop: (_, __) => _markLoaded(),
+                  onProgressChanged: (_, progress) {
+                    if (progress >= 70) _markLoaded();
+                  },
+                  onReceivedError: (_, request, error) {
+                    if (request.isForMainFrame ?? false) {
+                      if (!mounted) return;
+                      _timeoutTimer?.cancel();
                       setState(() {
                         _isLoading = false;
-                        _errorMessage = 'Ошибка загрузки: ${error.description}';
+                        _errorMessage =
+                            'Ошибка загрузки: ${error.description}';
+                      });
+                    }
+                  },
+                  onReceivedHttpError: (_, request, response) {
+                    if ((request.isForMainFrame ?? false) &&
+                        (response.statusCode ?? 0) >= 400) {
+                      if (!mounted) return;
+                      _timeoutTimer?.cancel();
+                      setState(() {
+                        _isLoading = false;
+                        _errorMessage =
+                            'HTTP ${response.statusCode}: ${response.reasonPhrase ?? ''}';
                       });
                     }
                   },
@@ -90,25 +184,47 @@ class _EmbedVideoPlayerWidgetState extends State<EmbedVideoPlayerWidget> {
     return Container(
       color: Colors.black,
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              'Не удалось открыть видео',
-              style: AppTypography.heading4.copyWith(color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                'Не удалось открыть видео',
+                style: AppTypography.heading4.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Text(
                 message,
                 style: AppTypography.body2.copyWith(color: Colors.white70),
                 textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (_embedUrl != null)
+                    ElevatedButton.icon(
+                      onPressed: _retry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Повторить'),
+                    ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white54),
+                    ),
+                    onPressed: _openExternally,
+                    icon: const Icon(Icons.open_in_browser),
+                    label: const Text('Открыть в браузере'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -121,7 +237,8 @@ class VideoUrlConverter {
   static String? toEmbedUrl(String url) {
     final youtubeId = _extractYouTubeId(url);
     if (youtubeId != null) {
-      return 'https://www.youtube.com/embed/$youtubeId?autoplay=1&playsinline=1';
+      return 'https://www.youtube-nocookie.com/embed/$youtubeId'
+          '?autoplay=1&playsinline=1&rel=0';
     }
 
     final rutubeId = _extractRuTubeId(url);
