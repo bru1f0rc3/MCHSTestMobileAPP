@@ -19,7 +19,7 @@ class AppConfig {
   static String _devHost() {
     if (_apiHostOverride.isNotEmpty) return _apiHostOverride;
     if (kIsWeb) return 'localhost';
-    if (Platform.isAndroid) return '10.0.2.2';
+    if (Platform.isAndroid) return 'localhost';
     return 'localhost';
   }
 
@@ -105,6 +105,9 @@ class ApiEndpoints {
   static const String userProgress = '/reports/user-progress';
   static const String testStatistics = '/reports/test-statistics';
   static const String roles = '/roles';
+  static const String storageBrowse = '/storage/browse';
+  static const String storageFile = '/storage/file';
+  static const String storageUpload = '/storage/upload';
 }
 
 class ErrorMessages {

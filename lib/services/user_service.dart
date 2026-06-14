@@ -113,7 +113,9 @@ class UserDto {
     );
   }
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isSuperAdmin => role.toLowerCase() == 'superadmin';
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin';
   bool get isGuest => role.toLowerCase() == 'guest';
 }
 

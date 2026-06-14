@@ -7,7 +7,9 @@ import 'package:mchs_mobile_app/utils/validators.dart';
 import 'package:mchs_mobile_app/widgets/custom_button.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
 import 'package:mchs_mobile_app/widgets/custom_text_field.dart';
+import 'package:mchs_mobile_app/widgets/storage_file_field.dart';
 import 'package:mchs_mobile_app/services/lecture_service.dart';
+import 'package:mchs_mobile_app/services/storage_service.dart';
 import 'package:mchs_mobile_app/models/lecture_model.dart';
 import 'package:mchs_mobile_app/providers/lecture_provider.dart';
 
@@ -132,18 +134,18 @@ class _CreateLectureScreenState extends ConsumerState<CreateLectureScreen> {
                   validator: (v) => Validators.description(v, maxLength: 50000),
                 ),
                 const SectionHeader(title: 'Медиа (необязательно)'),
-                CustomTextField(
+                StorageFileField(
                   controller: _videoPathController,
-                  label: 'Ссылка на видео',
-                  hint: 'https://example.com/video.mp4',
-                  prefixIcon: Icons.video_library_outlined,
+                  type: StorageFileType.video,
+                  label: 'Видео из хранилища',
+                  icon: Icons.video_library_outlined,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                CustomTextField(
+                StorageFileField(
                   controller: _documentPathController,
-                  label: 'Ссылка на документ (PDF)',
-                  hint: 'https://example.com/document.pdf',
-                  prefixIcon: Icons.picture_as_pdf_outlined,
+                  type: StorageFileType.document,
+                  label: 'Документ (PDF) из хранилища',
+                  icon: Icons.picture_as_pdf_outlined,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 CustomButton(

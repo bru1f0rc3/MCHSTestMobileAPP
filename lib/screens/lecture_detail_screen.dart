@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
-import 'package:mchs_mobile_app/widgets/embed_video_player_widget.dart';
+import 'package:mchs_mobile_app/widgets/local_video_player_widget.dart';
 import 'package:mchs_mobile_app/widgets/pdf_viewer_widget.dart';
+import 'package:mchs_mobile_app/services/storage_service.dart';
 import 'package:mchs_mobile_app/providers/lecture_provider.dart';
 
 class LectureDetailScreen extends ConsumerWidget {
@@ -29,10 +30,11 @@ class LectureDetailScreen extends ConsumerWidget {
 
           final hasVideo =
               lecture.videoPath != null && lecture.videoPath!.isNotEmpty;
-          final hasPdf = lecture.documentPath != null &&
+          final hasPdf =
+              lecture.documentPath != null &&
               lecture.documentPath!.isNotEmpty;
-          final hasText = lecture.textContent != null &&
-              lecture.textContent!.isNotEmpty;
+          final hasText =
+              lecture.textContent != null && lecture.textContent!.isNotEmpty;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -49,6 +51,17 @@ class LectureDetailScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+
+              // Видео грузится сразу — встроенным нативным плеером.
+              if (hasVideo) ...[
+                ClipRRect(
+                  borderRadius: AppRadius.borderRadiusMd,
+                  child: LocalVideoPlayer(source: lecture.videoPath!),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+              ],
+
+              // Текст лекции.
               if (hasText) ...[
                 Container(
                   padding: AppSpacing.paddingLg,
@@ -65,26 +78,11 @@ class LectureDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
               ],
-              const SizedBox(height: AppSpacing.xl),
-              if (hasVideo) ...[
-                _ResourceTile(
-                  icon: Icons.play_circle_outline,
-                  title: 'Видеоматериал',
-                  subtitle: 'Открыть видео',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EmbedVideoPlayerWidget(
-                        videoUrl: lecture.videoPath!,
-                        title: lecture.title,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              if (hasPdf) ...[
+
+              // Документ PDF.
+              if (hasPdf)
                 _ResourceTile(
                   icon: Icons.picture_as_pdf_outlined,
                   title: 'Документ PDF',
@@ -94,14 +92,19 @@ class LectureDetailScreen extends ConsumerWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => PdfViewerWidget(
-                          pdfUrl: lecture.documentPath!,
+                          pdfUrl: StorageUrls.fileUrl(lecture.documentPath!),
                           title: lecture.title,
                         ),
                       ),
                     );
                   },
                 ),
-              ],
+
+              if (!hasVideo && !hasPdf && !hasText)
+                const EmptyState(
+                  icon: Icons.video_library_outlined,
+                  title: 'В этой лекции пока нет материалов',
+                ),
             ],
           );
         },

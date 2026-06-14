@@ -47,7 +47,9 @@ class User {
     };
   }
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isSuperAdmin => role.toLowerCase() == 'superadmin';
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin';
   bool get isGuest => role.toLowerCase() == 'guest';
   String get shortName {
     final ln = (lastName ?? '').trim();
@@ -104,7 +106,9 @@ class UserModel {
     required this.token,
   });
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isSuperAdmin => role.toLowerCase() == 'superadmin';
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin';
   bool get isGuest => role.toLowerCase() == 'guest';
 }
 
@@ -145,7 +149,9 @@ class AuthResponse {
     };
   }
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isSuperAdmin => role.toLowerCase() == 'superadmin';
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin';
 
   UserModel toUserModel([String? tokenOverride]) {
     return UserModel(

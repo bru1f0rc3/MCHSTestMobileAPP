@@ -6,8 +6,10 @@ import 'package:mchs_mobile_app/utils/error_handler.dart';
 import 'package:mchs_mobile_app/utils/validators.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
 import 'package:mchs_mobile_app/widgets/custom_text_field.dart';
+import 'package:mchs_mobile_app/widgets/storage_file_field.dart';
 import 'package:mchs_mobile_app/providers/lecture_provider.dart';
 import 'package:mchs_mobile_app/services/lecture_service.dart';
+import 'package:mchs_mobile_app/services/storage_service.dart';
 import 'package:mchs_mobile_app/models/lecture_model.dart';
 
 class AdminLecturesScreen extends ConsumerStatefulWidget {
@@ -268,18 +270,18 @@ class _AdminLecturesScreenState extends ConsumerState<AdminLecturesScreen> {
                   validator: (v) => Validators.description(v, maxLength: 10000),
                 ),
                 const SizedBox(height: 16),
-                CustomTextField(
+                StorageFileField(
                   controller: videoPathController,
-                  label: 'Ссылка на видео',
-                  hint: 'https://example.com/video.mp4',
-                  prefixIcon: Icons.video_library,
+                  type: StorageFileType.video,
+                  label: 'Видео из хранилища',
+                  icon: Icons.video_library,
                 ),
                 const SizedBox(height: 16),
-                CustomTextField(
+                StorageFileField(
                   controller: documentPathController,
-                  label: 'Ссылка на документ (PDF)',
-                  hint: 'https://example.com/document.pdf',
-                  prefixIcon: Icons.picture_as_pdf,
+                  type: StorageFileType.document,
+                  label: 'Документ (PDF) из хранилища',
+                  icon: Icons.picture_as_pdf,
                 ),
               ],
             ),

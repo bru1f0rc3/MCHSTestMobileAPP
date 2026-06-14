@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mchs_mobile_app/providers/auth_provider.dart';
 import 'package:mchs_mobile_app/providers/refresh_provider.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
 import 'package:mchs_mobile_app/widgets/custom_card.dart';
@@ -51,11 +52,14 @@ class AdminDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
+    final isSuperAdmin = ref.watch(authStateProvider).isSuperAdmin;
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text('Администрирование'),
+        title: Text(
+          isSuperAdmin ? 'Суперадминистрирование' : 'Администрирование',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -93,13 +97,15 @@ class AdminDashboardScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            _AdminTile(
-              icon: Icons.people_outline,
-              title: 'Пользователи',
-              subtitle: 'Учётные записи, роли, блокировки',
-              onTap: () => context.push('/admin-users'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
+            if (isSuperAdmin) ...[
+              _AdminTile(
+                icon: Icons.people_outline,
+                title: 'Пользователи',
+                subtitle: 'Учётные записи и администраторы',
+                onTap: () => context.push('/admin-users'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             _AdminTile(
               icon: Icons.quiz_outlined,
               title: 'Тесты',

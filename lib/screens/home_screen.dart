@@ -23,7 +23,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).user;
-    final isAdmin = user?.role == 'admin';
+    final isAdmin = user?.isAdmin ?? false;
 
     return Scaffold(
       backgroundColor: context.backgroundColor,

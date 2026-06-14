@@ -137,13 +137,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onPressed: authState.isLoading ? null : _handleLogin,
               isLoading: authState.isLoading,
             ),
-            const SizedBox(height: AppSpacing.md),
-            CustomButton(
-              text: _checkingDevice
-                  ? 'Проверка устройства...'
-                  : (hasAccount ? 'Войти в существующий' : 'Войти как гость'),
-              isOutlined: true,
-              onPressed: (authState.isLoading || _checkingDevice)
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: Divider(color: context.borderColor, thickness: 1),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  child: Text(
+                    'или',
+                    style: AppTypography.caption.copyWith(
+                      color: context.textTertiaryColor,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Divider(color: context.borderColor, thickness: 1),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _GuestCard(
+              hasAccount: hasAccount,
+              isChecking: _checkingDevice,
+              isBusy: authState.isLoading,
+              onTap: (authState.isLoading || _checkingDevice)
                   ? null
                   : _handleGuestLogin,
             ),
@@ -170,6 +191,112 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestCard extends StatelessWidget {
+  final bool hasAccount;
+  final bool isChecking;
+  final bool isBusy;
+  final VoidCallback? onTap;
+
+  const _GuestCard({
+    required this.hasAccount,
+    required this.isChecking,
+    required this.isBusy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = isChecking
+        ? 'Проверка устройства...'
+        : (hasAccount
+              ? 'Войти в существующий аккаунт'
+              : 'Попробовать без регистрации');
+    final subtitle = hasAccount
+        ? 'На этом устройстве уже есть аккаунт'
+        : 'Пройдите тесты прямо сейчас. Прогресс сохраняется — позже сможете создать полный аккаунт.';
+
+    return Opacity(
+      opacity: onTap == null ? 0.6 : 1.0,
+      child: Material(
+        color: context.surfaceColor,
+        borderRadius: AppRadius.borderRadiusMd,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.borderRadiusMd,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.borderRadiusMd,
+              border: Border.all(
+                color: context.primaryColor.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: context.primaryColor.withValues(alpha: 0.10),
+                      borderRadius: AppRadius.borderRadiusSm,
+                    ),
+                    child: Icon(
+                      hasAccount
+                          ? Icons.person_pin_circle_outlined
+                          : Icons.flash_on_rounded,
+                      color: context.primaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: AppTypography.body1.copyWith(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: AppTypography.caption.copyWith(
+                            color: context.textSecondaryColor,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isBusy && !isChecking)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: context.textTertiaryColor,
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

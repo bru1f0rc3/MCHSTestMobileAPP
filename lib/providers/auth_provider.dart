@@ -23,6 +23,7 @@ class AuthState {
 
   bool get isGuest => user?.isGuest ?? false;
   bool get isAdmin => user?.isAdmin ?? false;
+  bool get isSuperAdmin => user?.isSuperAdmin ?? false;
 
   AuthState copyWith({
     bool? isAuthenticated,

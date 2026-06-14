@@ -53,7 +53,11 @@ class ProfileScreen extends ConsumerWidget {
     final fullName = _composeFullName(profileAsync.asData?.value);
     final roleLabel = isGuest
         ? 'Гостевой режим'
-        : (user?.role == 'admin' ? 'Администратор' : 'Пользователь');
+        : (user?.isSuperAdmin ?? false
+              ? 'Суперадминистратор'
+              : (user?.isAdmin ?? false
+                    ? 'Администратор'
+                    : 'Пользователь'));
 
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -73,7 +77,7 @@ class ProfileScreen extends ConsumerWidget {
             username: user?.username ?? '',
             roleLabel: roleLabel,
             isGuest: isGuest,
-            isAdmin: !isGuest && user?.role == 'admin',
+            isAdmin: !isGuest && (user?.isAdmin ?? false),
           ),
           if (!isGuest) ...[
             const SizedBox(height: AppSpacing.lg),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mchs_mobile_app/providers/auth_provider.dart';
 import 'package:mchs_mobile_app/providers/refresh_provider.dart';
 import 'package:mchs_mobile_app/theme/app_theme.dart';
 import 'package:mchs_mobile_app/utils/error_handler.dart';
@@ -127,6 +128,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       );
     }
 
+    final authState = ref.watch(authStateProvider);
+    final isSuperAdmin = authState.isSuperAdmin;
+    final currentUserId = authState.user?.id;
+
     return RefreshIndicator(
       onRefresh: () async => _refresh(),
       child: ListView.separated(
@@ -140,8 +145,15 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           final user = filteredUsers[index];
+          final roleLower = user.role.toLowerCase();
+          final isSelf = currentUserId != null && user.id == currentUserId;
+          final canManage = !isSelf &&
+              (isSuperAdmin ||
+                  (roleLower != 'admin' && roleLower != 'superadmin'));
           return _UserCard(
             user: user,
+            canManage: canManage,
+            isSelf: isSelf,
             onEdit: () => _showEditUserDialog(user),
             onDelete: () => _confirmDeleteUser(user),
           );
@@ -154,7 +166,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
-    int selectedRoleId = 2;
+    int? selectedRoleId;
 
     showDialog(
       context: context,
@@ -189,13 +201,37 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     const SizedBox(height: 16),
                     rolesAsync.when(
                       data: (roles) {
+                        final isSuperAdmin = ref
+                            .watch(authStateProvider)
+                            .isSuperAdmin;
+                        final visibleRoles = roles
+                            .where(
+                              (r) =>
+                                  isSuperAdmin ||
+                                  (r.name.toLowerCase() != 'admin' &&
+                                      r.name.toLowerCase() != 'superadmin'),
+                            )
+                            .toList();
+                        if (visibleRoles.isEmpty) {
+                          return const Text('Нет доступных ролей');
+                        }
+                        if (selectedRoleId == null ||
+                            !visibleRoles.any(
+                              (r) => r.id == selectedRoleId,
+                            )) {
+                          final defaultRole = visibleRoles.firstWhere(
+                            (r) => r.name.toLowerCase() == 'user',
+                            orElse: () => visibleRoles.first,
+                          );
+                          selectedRoleId = defaultRole.id;
+                        }
                         return DropdownButtonFormField<int>(
                           initialValue: selectedRoleId,
                           decoration: const InputDecoration(
                             labelText: 'Роль',
                             prefixIcon: Icon(Icons.admin_panel_settings),
                           ),
-                          items: roles
+                          items: visibleRoles
                               .map(
                                 (role) => DropdownMenuItem(
                                   value: role.id,
@@ -203,7 +239,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) => selectedRoleId = value ?? 2,
+                          onChanged: (value) {
+                            if (value != null) selectedRoleId = value;
+                          },
                         );
                       },
                       loading: () => const CircularProgressIndicator(),
@@ -240,9 +278,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     GlobalKey<FormState> formKey,
     TextEditingController usernameController,
     TextEditingController passwordController,
-    int roleId,
+    int? roleId,
   ) async {
     if (!(formKey.currentState?.validate() ?? false)) return;
+    if (roleId == null) {
+      ErrorHandler.showErrorSnackBar(
+        dialogContext,
+        'Выберите роль для пользователя',
+      );
+      return;
+    }
 
     setState(() => _isProcessing = true);
     Navigator.pop(dialogContext);
@@ -299,19 +344,39 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     const SizedBox(height: 16),
                     rolesAsync.when(
                       data: (roles) {
-                        final currentRole = roles.firstWhere(
-                          (r) =>
-                              r.name.toLowerCase() == user.role.toLowerCase(),
-                          orElse: () => roles.first,
-                        );
-                        selectedRoleId ??= currentRole.id;
+                        final isSuperAdmin = ref
+                            .watch(authStateProvider)
+                            .isSuperAdmin;
+                        final visibleRoles = roles
+                            .where(
+                              (r) =>
+                                  isSuperAdmin ||
+                                  (r.name.toLowerCase() != 'admin' &&
+                                      r.name.toLowerCase() != 'superadmin'),
+                            )
+                            .toList();
+                        if (visibleRoles.isEmpty) {
+                          return const Text('Нет доступных ролей');
+                        }
+                        if (selectedRoleId == null ||
+                            !visibleRoles.any(
+                              (r) => r.id == selectedRoleId,
+                            )) {
+                          final currentRole = visibleRoles.firstWhere(
+                            (r) =>
+                                r.name.toLowerCase() ==
+                                user.role.toLowerCase(),
+                            orElse: () => visibleRoles.first,
+                          );
+                          selectedRoleId = currentRole.id;
+                        }
                         return DropdownButtonFormField<int>(
                           initialValue: selectedRoleId,
                           decoration: const InputDecoration(
                             labelText: 'Роль',
                             prefixIcon: Icon(Icons.admin_panel_settings),
                           ),
-                          items: roles
+                          items: visibleRoles
                               .map(
                                 (role) => DropdownMenuItem(
                                   value: role.id,
@@ -319,7 +384,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) => selectedRoleId = value,
+                          onChanged: (value) {
+                            if (value != null) selectedRoleId = value;
+                          },
                         );
                       },
                       loading: () => const CircularProgressIndicator(),
@@ -419,6 +486,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
   String _getRoleName(String role) {
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        return 'Суперадминистратор';
       case 'admin':
         return 'Администратор';
       case 'user':
@@ -433,11 +502,15 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
 class _UserCard extends StatelessWidget {
   final UserDto user;
+  final bool canManage;
+  final bool isSelf;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _UserCard({
     required this.user,
+    required this.canManage,
+    required this.isSelf,
     required this.onEdit,
     required this.onDelete,
   });
@@ -466,12 +539,40 @@ class _UserCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  user.username,
-                  style: AppTypography.body1.copyWith(
-                    color: context.textPrimaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.username,
+                        style: AppTypography.body1.copyWith(
+                          color: context.textPrimaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isSelf) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'вы',
+                          style: AppTypography.caption.copyWith(
+                            color: context.primaryColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Row(
@@ -500,48 +601,55 @@ class _UserCard extends StatelessWidget {
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_horiz_rounded,
+          if (canManage)
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_horiz_rounded,
+                color: context.textTertiaryColor,
+              ),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  onEdit();
+                } else if (value == 'delete') {
+                  onDelete();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 18),
+                      SizedBox(width: 12),
+                      Text('Редактировать'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: AppColors.error,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Удалить',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else
+            Icon(
+              Icons.lock_outline,
+              size: 18,
               color: context.textTertiaryColor,
             ),
-            onSelected: (value) {
-              if (value == 'edit') {
-                onEdit();
-              } else if (value == 'delete') {
-                onDelete();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_outlined, size: 18),
-                    SizedBox(width: 12),
-                    Text('Редактировать'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline,
-                      size: 18,
-                      color: AppColors.error,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Удалить',
-                      style: TextStyle(color: AppColors.error),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -549,6 +657,8 @@ class _UserCard extends StatelessWidget {
 
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        return AppColors.error;
       case 'admin':
         return AppColors.accent;
       case 'user':
@@ -562,6 +672,8 @@ class _UserCard extends StatelessWidget {
 
   IconData _getRoleIcon(String role) {
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        return Icons.verified_user;
       case 'admin':
         return Icons.admin_panel_settings;
       case 'user':
@@ -575,6 +687,8 @@ class _UserCard extends StatelessWidget {
 
   String _getRoleName(String role) {
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        return 'Суперадминистратор';
       case 'admin':
         return 'Администратор';
       case 'user':

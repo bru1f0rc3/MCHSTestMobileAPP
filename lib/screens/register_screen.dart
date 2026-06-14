@@ -25,6 +25,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _showNameFields = false;
 
   @override
   void dispose() {
@@ -65,46 +66,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  String? _optionalMinLength(String? value, int minLength, String fieldName) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (value.trim().length < minLength) {
+      return '$fieldName: минимум $minLength символов';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
     return AuthScaffold(
       title: 'Регистрация',
-      subtitle: 'Создайте аккаунт в обучающем портале',
+      subtitle: 'Достаточно логина и пароля — ФИО можно добавить позже',
       showBackButton: true,
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _SectionLabel('ФИО'),
-            AuthField(
-              controller: _lastNameController,
-              label: 'Фамилия',
-              hint: 'Иванов',
-              validator: (v) => Validators.minLength(v, 2, 'Фамилия'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AuthField(
-              controller: _firstNameController,
-              label: 'Имя',
-              hint: 'Иван',
-              validator: (v) => Validators.minLength(v, 2, 'Имя'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AuthField(
-              controller: _patronymicController,
-              label: 'Отчество',
-              hint: 'Иванович (необязательно)',
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                if (v.trim().length < 2) return 'Минимум 2 символа';
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const _SectionLabel('Учётные данные'),
             AuthField(
               controller: _usernameController,
               label: 'Имя пользователя',
@@ -140,6 +122,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               validator: (v) =>
                   Validators.confirmPassword(v, _passwordController.text),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _OptionalNameSection(
+              expanded: _showNameFields,
+              onToggle: () =>
+                  setState(() => _showNameFields = !_showNameFields),
+              lastNameController: _lastNameController,
+              firstNameController: _firstNameController,
+              patronymicController: _patronymicController,
+              optionalMinLength: _optionalMinLength,
             ),
             const SizedBox(height: AppSpacing.xl),
             CustomButton(
@@ -179,22 +171,78 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
+class _OptionalNameSection extends StatelessWidget {
+  final bool expanded;
+  final VoidCallback onToggle;
+  final TextEditingController lastNameController;
+  final TextEditingController firstNameController;
+  final TextEditingController patronymicController;
+  final String? Function(String?, int, String) optionalMinLength;
+
+  const _OptionalNameSection({
+    required this.expanded,
+    required this.onToggle,
+    required this.lastNameController,
+    required this.firstNameController,
+    required this.patronymicController,
+    required this.optionalMinLength,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Text(
-        text,
-        style: AppTypography.caption.copyWith(
-          color: context.textTertiaryColor,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          borderRadius: AppRadius.borderRadiusSm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Row(
+              children: [
+                Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: context.textSecondaryColor,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Указать ФИО (необязательно)',
+                  style: AppTypography.body2.copyWith(
+                    color: context.textSecondaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        if (expanded) ...[
+          const SizedBox(height: AppSpacing.sm),
+          AuthField(
+            controller: lastNameController,
+            label: 'Фамилия',
+            hint: 'Иванов',
+            validator: (v) => optionalMinLength(v, 2, 'Фамилия'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AuthField(
+            controller: firstNameController,
+            label: 'Имя',
+            hint: 'Иван',
+            validator: (v) => optionalMinLength(v, 2, 'Имя'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AuthField(
+            controller: patronymicController,
+            label: 'Отчество',
+            hint: 'Иванович',
+            validator: (v) => optionalMinLength(v, 2, 'Отчество'),
+          ),
+        ],
+      ],
     );
   }
 }
